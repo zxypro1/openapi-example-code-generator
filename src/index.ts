@@ -1,23 +1,14 @@
-import { OpenAPIV3 } from 'openapi-types';
-
-type HttpMethod =
-  | "get"
-  | "post"
-  | "put"
-  | "delete"
-  | "patch"
-  | "head"
-  | "options";
-
-type ExampleParams = {
-  method: string;
-  path: string;
-  params: {
-    path: Record<string, any>;
-    query: Record<string, any>;
-    body?: any;
-  };
-};
+import { OpenAPIV3 } from "openapi-types";
+import { HttpMethod, ExampleParams } from "./types";
+import {
+  generateCurlExample,
+  generatePythonExample,
+  generateJavaExample,
+  generateJavaScriptExample,
+  generateAxiosExample,
+  generateN8nExample,
+  generateDifyExample,
+} from "./generators";
 
 class OpenAPICodeGenerator {
   private openApi: OpenAPIV3.Document;
@@ -49,14 +40,20 @@ class OpenAPICodeGenerator {
       case "object":
         return Object.entries(schema.properties || {}).reduce(
           (acc, [key, val]) => {
-            acc[key] = this.resolveSchemaExample(val as OpenAPIV3.SchemaObject);
+            acc[key] = this.resolveSchemaExample(
+              val as OpenAPIV3.SchemaObject
+            );
             return acc;
           },
           {} as Record<string, any>
         );
       case "array":
         return schema.items
-          ? [this.resolveSchemaExample(schema.items as OpenAPIV3.SchemaObject)]
+          ? [
+              this.resolveSchemaExample(
+                schema.items as OpenAPIV3.SchemaObject
+              ),
+            ]
           : [];
       default:
         return "unknown";
@@ -68,9 +65,11 @@ class OpenAPICodeGenerator {
 
     for (const [path, pathItem] of Object.entries(this.openApi.paths || {})) {
       if (!pathItem) continue;
-      
-      for (const method of Object.keys(pathItem).filter(k => 
-        ["get", "post", "put", "delete", "patch", "head", "options"].includes(k)
+
+      for (const method of Object.keys(pathItem).filter((k) =>
+        ["get", "post", "put", "delete", "patch", "head", "options"].includes(
+          k
+        )
       ) as HttpMethod[]) {
         const operation = pathItem[method] as OpenAPIV3.OperationObject;
         if (!operation || !["get", "post", "put", "delete"].includes(method))
@@ -112,182 +111,57 @@ class OpenAPICodeGenerator {
     return examples;
   }
 
-  private generateCurlExample(example: ExampleParams): string {
-    const { method, path, params } = example;
-    const encodedQuery = new URLSearchParams(params.query).toString();
-    const fullUrl = `${this.baseUrl}${path.replace(
-      /{(\w+)}/g,
-      (_, k) => params.path[k]
-    )}${encodedQuery ? `?${encodedQuery}` : ""}`;
-
-    return [
-      `curl -X ${method}`,
-      ...(params.body
-        ? [
-            '-H "Content-Type: application/json"',
-            `-d '${JSON.stringify(params.body)}'`,
-          ]
-        : []),
-      `'${fullUrl}'`,
-    ].join(" ");
-  }
-
-  private generatePythonExample(example: ExampleParams): string {
-    const { method, path, params } = example;
-    const basePath = path.replace(/{(\w+)}/g, (_, k) => params.path[k]);
-
-    const lines = [
-      "import requests",
-      "",
-      `response = requests.${method.toLowerCase()}("${
-        this.baseUrl
-      }${basePath}"`,
-    ];
-
-    if (Object.keys(params.query).length) {
-      lines.push(`    params=${JSON.stringify(params.query)},`);
-    }
-
-    if (params.body) {
-      lines.push(`    json=${JSON.stringify(params.body)}`);
-    }
-
-    lines[lines.length - 1] = lines[lines.length - 1].replace(/,$/, "");
-    lines.push(")");
-
-    return lines.join("\n");
-  }
-
-  private generateJavaExample(example: ExampleParams): string {
-    const { method, path, params } = example;
-    const encodedQuery = new URLSearchParams(params.query).toString();
-    const fullUrl = `${this.baseUrl}${path.replace(
-      /{(\w+)}/g,
-      (_, k) => params.path[k]
-    )}${encodedQuery ? `?${encodedQuery}` : ""}`;
-
-    const lines = [
-      `HttpURLConnection conn = (HttpURLConnection) new URL("${fullUrl}").openConnection();`,
-      `conn.setRequestMethod("${method}");`,
-    ];
-
-    if (params.body) {
-      lines.push(
-        'conn.setRequestProperty("Content-Type", "application/json");',
-        "conn.setDoOutput(true);",
-        "OutputStream os = conn.getOutputStream();",
-        `os.write(${JSON.stringify(JSON.stringify(params.body))}.getBytes());`,
-        "os.flush();",
-        "os.close();"
-      );
-    }
-
-    lines.push("int responseCode = conn.getResponseCode();");
-
-    return lines.join("\n");
-  }
-
-  private generateJavaScriptExample(example: ExampleParams): string {
-    const { method, path, params } = example;
-    const encodedQuery = new URLSearchParams(params.query).toString();
-    const fullUrl = `${this.baseUrl}${path.replace(
-      /{(\w+)}/g,
-      (_, k) => params.path[k]
-    )}${encodedQuery ? `?${encodedQuery}` : ""}`;
-
-    const lines = [`fetch('${fullUrl}', {`];
-
-    const options = [`  method: '${method}'`];
-
-    if (params.body) {
-      options.push(
-        "  headers: {",
-        '    "Content-Type": "application/json"',
-        "  },",
-        `  body: JSON.stringify(${JSON.stringify(params.body)})`
-      );
-    }
-
-    lines.push(...options, "})");
-    lines.push(".then(response => response.json())");
-    lines.push(".then(data => console.log(data))");
-    lines.push('.catch(error => console.error("Error:", error));');
-
-    return lines.join("\n");
-  }
-
-  private generateAxiosExample(example: ExampleParams): string {
-    const { method, path, params } = example;
-    const basePath = path.replace(/{(\w+)}/g, (_, k) => params.path[k]);
-    const fullUrl = `${this.baseUrl}${basePath}`;
-
-    const lines = [
-      "import axios from 'axios';",
-      "",
-      `axios.${method.toLowerCase()}(\`${fullUrl}\`,`,
-    ];
-
-    const config = [];
-
-    if (Object.keys(params.query).length) {
-      config.push(`  params: ${JSON.stringify(params.query, null, 2)}`);
-    }
-
-    if (params.body) {
-      config.push(`  data: ${JSON.stringify(params.body, null, 2)}`);
-    }
-
-    if (config.length > 0) {
-      lines.push("  {");
-      lines.push(config.join(",\n"));
-      lines.push("  }");
-    }
-
-    lines.push(")");
-    lines.push(".then(response => console.log(response.data))");
-    lines.push(".catch(error => console.error('Error:', error));");
-
-    return lines.join("\n");
-  }
-
-  // 公共接口
   public getCurlExamples(): string[] {
     return this.collectExamples().map((example) =>
-      this.generateCurlExample(example)
+      generateCurlExample(example, this.baseUrl)
     );
   }
 
   public getPythonExamples(): string[] {
     return this.collectExamples().map((example) =>
-      this.generatePythonExample(example)
+      generatePythonExample(example, this.baseUrl)
     );
   }
 
   public getJavaExamples(): string[] {
     return this.collectExamples().map((example) =>
-      this.generateJavaExample(example)
+      generateJavaExample(example, this.baseUrl)
     );
   }
 
   public getJavaScriptExamples(): string[] {
     return this.collectExamples().map((example) =>
-      this.generateJavaScriptExample(example)
+      generateJavaScriptExample(example, this.baseUrl)
     );
   }
 
   public getAxiosExamples(): string[] {
     return this.collectExamples().map((example) =>
-      this.generateAxiosExample(example)
+      generateAxiosExample(example, this.baseUrl)
     );
   }
 
-  public getAllExamples(): string[] {
+  public getN8nExamples(language: "en" | "zh" = "en"): string[] {
+    return this.collectExamples().map((example) =>
+      generateN8nExample(example, this.baseUrl, language)
+    );
+  }
+
+  public getDifyExamples(language: "en" | "zh" = "en"): string[] {
+    return this.collectExamples().map((example) =>
+      generateDifyExample(example, this.baseUrl, language)
+    );
+  }
+
+  public getAllExamples(language: "en" | "zh" = "en"): string[] {
     return [
       ...this.getCurlExamples(),
       ...this.getPythonExamples(),
       ...this.getJavaExamples(),
       ...this.getJavaScriptExamples(),
       ...this.getAxiosExamples(),
+      ...this.getN8nExamples(language),
+      ...this.getDifyExamples(language),
     ];
   }
 }

@@ -7,7 +7,7 @@ Generate executable code examples from OpenAPI specifications for multiple langu
 
 ## Features
 
-- **Multi-language Support**: Generate code for cURL, Python, Java, JavaScript (Fetch API), and Axios
+- **Multi-language Support**: Generate code for cURL, Python, Java, JavaScript (Fetch API), Axios, n8n, and Dify
 - **Smart Example Generation**: Automatically handles path/query parameters and request bodies
 - **Type Safe**: Built with TypeScript and official OpenAPI types
 - **Framework Agnostic**: Works with any OpenAPI 3.0+ specification
@@ -42,6 +42,8 @@ const generator = new OpenAPICodeGenerator(
 const curlExamples = generator.getCurlExamples();
 const pythonExamples = generator.getPythonExamples();
 const axiosExamples = generator.getAxiosExamples();
+const n8nExamples = generator.getN8nExamples();
+const difyExamples = generator.getDifyExamples();
 
 // Get all examples
 const allExamples = generator.getAllExamples();
@@ -69,15 +71,38 @@ const pythonCode = generator.getPythonExamples();
 const axiosCode = generator.getAxiosExamples();
 ```
 
+#### Internationalization for n8n and Dify
+
+n8n and Dify generators support internationalization. You can pass a language parameter ('en' or 'zh') to get examples in the desired language:
+
+```typescript
+// Generate n8n examples in English (default)
+const n8nEnglish = generator.getN8nExamples("en");
+
+// Generate n8n examples in Chinese
+const n8nChinese = generator.getN8nExamples("zh");
+
+// Generate Dify examples in English (default)
+const difyEnglish = generator.getDifyExamples("en");
+
+// Generate Dify examples in Chinese
+const difyChinese = generator.getDifyExamples("zh");
+
+// Get all examples with Chinese language for n8n and Dify
+const allExamplesZh = generator.getAllExamples("zh");
+```
+
 ## Supported Languages
 
-| Language   | Method                      | Example Output                         |
-| ---------- | --------------------------- | -------------------------------------- |
-| cURL       | `getCurlExamples()`       | `curl -X GET https://api.example...` |
-| Python     | `getPythonExamples()`     | `import requests...`                 |
-| Java       | `getJavaExamples()`       | `HttpURLConnection conn = ...`       |
-| JavaScript | `getJavaScriptExamples()` | `fetch(...)`                         |
-| Axios      | `getAxiosExamples()`      | `axios.get(...)`                     |
+| Language   | Method                      | Example Output                                     |
+| ---------- | --------------------------- | -------------------------------------------------- |
+| cURL       | `getCurlExamples()`       | `curl -X GET https://api.example...`             |
+| Python     | `getPythonExamples()`     | `import requests...`                             |
+| Java       | `getJavaExamples()`       | `HttpURLConnection conn = ...`                   |
+| JavaScript | `getJavaScriptExamples()` | `fetch(...)`                                     |
+| Axios      | `getAxiosExamples()`      | `axios.get(...)`                                 |
+| n8n        | `getN8nExamples()`        | n8n HTTP Request node configuration              |
+| Dify       | `getDifyExamples()`       | Dify custom tool configuration                   |
 
 ## API Reference
 
@@ -92,12 +117,14 @@ Create a new generator instance.
 
 ### Methods
 
-- `getCurlExamples(): string[]`
-- `getPythonExamples(): string[]`
-- `getJavaExamples(): string[]`
-- `getJavaScriptExamples(): string[]`
-- `getAxiosExamples(): string[]`
-- `getAllExamples(): string[]`
+- `getCurlExamples(): string[]` - Generate cURL command examples
+- `getPythonExamples(): string[]` - Generate Python code examples
+- `getJavaExamples(): string[]` - Generate Java code examples
+- `getJavaScriptExamples(): string[]` - Generate JavaScript (Fetch API) code examples
+- `getAxiosExamples(): string[]` - Generate Axios code examples
+- `getN8nExamples(language?: string): string[]` - Generate n8n HTTP Request node configuration (supports 'en' and 'zh', defaults to 'en')
+- `getDifyExamples(language?: string): string[]` - Generate Dify custom tool configuration (supports 'en' and 'zh', defaults to 'en')
+- `getAllExamples(language?: string): string[]` - Generate all code examples with optional language parameter for n8n and Dify
 
 ## Contributing
 
